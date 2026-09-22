@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Register - Car Showroom</title>
+    <style>
+        body {
+            font-family: Arial;
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 20px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #111;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #message {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>📝 Create Account</h1>
+
+<form id="registerForm">
+
+    <input
+        type="text"
+        id="name"
+        placeholder="Name"
+        required
+    >
+
+    <input
+        type="email"
+        id="email"
+        placeholder="Email"
+        required
+    >
+
+    <input
+        type="password"
+        id="password"
+        placeholder="Password (minimum 8 characters)"
+        minlength="8"
+        required
+    >
+
+    <button type="submit">Register</button>
+
+</form>
+
+<p id="message"></p>
+
+<p>
+    Already have an account?
+    <a href="login.html">Login</a>
+</p>
+
+<script>
+const API_URL = "http://localhost:8000";
+
+document.getElementById("registerForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Registration failed");
+        }
+
+        document.getElementById("message").innerText =
+            "Registration successful! Redirecting to login...";
+
+        setTimeout(() => {
+            window.location.href = "login.html";
+        }, 800);
+
+    } catch (error) {
+        document.getElementById("message").innerText =
+            error.message;
+    }
+});
+</script>
+
+</body>
+</html>

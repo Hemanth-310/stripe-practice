@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Car Showroom</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: auto;
+            padding: 30px;
+            background: #f5f5f5;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #111;
+            color: white;
+        }
+
+        .secondary {
+            background: #666;
+        }
+
+        #cars {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .car {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .price {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .status {
+            margin: 10px 0;
+        }
+
+        #message {
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <h1>🚗 Car Showroom</h1>
+
+    <div>
+        <button class="secondary" onclick="logout()">
+            Logout
+        </button>
+    </div>
+
+</header>
+
+<div id="message"></div>
+
+<div id="cars"></div>
+
+<script>
+
+const API_URL = "http://localhost:8000";
+
+const token = localStorage.getItem("access_token");
+
+// If user isn't logged in
+if (!token) {
+    document.getElementById("message").innerHTML =
+        `Please <a href="login.html">login</a> first.`;
+} else {
+    loadCars();
+}
+
+
+// Load cars
+async function loadCars() {
+
+    document.getElementById("message").innerText =
+        "Loading cars...";
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/api/v1/cars`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            if (response.status === 401) {
+                localStorage.removeItem("access_token");
+                window.location.href = "login.html";
+                return;
+            }
+
+            throw new Error(data.detail || "Failed to load cars");
+        }
+
+        displayCars(data);
+
+        document.getElementById("message").innerText =
+            `${data.length} car(s) available`;
+
+    } catch (error) {
+
+        document.getElementById("message").innerText =
+            "Error: " + error.message;
+
+    }
+}
+
+
+// Display cars
+function displayCars(cars) {
+
+    const container = document.getElementById("cars");
+
+    if (cars.length === 0) {
+
+        container.innerHTML =
+            "<p>No cars available.</p>";
+
+        return;
+    }
+
+    container.innerHTML = cars.map(car => `
+
+        <div class="car">
+
+            <h2>
+                ${car.brand} ${car.model}
+            </h2>
+
+            <p>
+                Year: ${car.year}
+            </p>
+
+            <p class="price">
+                $${car.price}
+            </p>
+
+            <p>
+                ${car.description || "No description"}
+            </p>
+
+            <p class="status">
+                ${
+                    car.is_available
+                    ? "Available ✅"
+                    : "Sold ❌"
+                }
+            </p>
+
+            ${
+                car.is_available
+                ? `
+                    <button onclick="checkout(${car.id})">
+                        Buy Now
+                    </button>
+                  `
+                : ""
+            }
+
+        </div>
+
+    `).join("");
+}
+
+
+// Start Stripe checkout
+async function checkout(carId) {
+
+    try {
+
+        document.getElementById("message").innerText =
+            "Creating checkout session...";
+
+        const response = await fetch(
+            `${API_URL}/api/v1/orders/${carId}/checkout`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Checkout failed"
+            );
+        }
+
+        // Redirect to Stripe
+        window.location.href = data.checkout_url;
+
+    } catch (error) {
+
+        document.getElementById("message").innerText =
+            "Checkout error: " + error.message;
+
+    }
+}
+
+
+// Logout
+function logout() {
+
+    localStorage.removeItem("access_token");
+
+    window.location.href = "login.html";
+}
+
+</script>
+
+</body>
+</html>
